@@ -473,6 +473,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
 
         raid_id = query_data[0]
         response = query_data[1]
+        maximum_trainers_in_raid = 20
 
         raid = next((x for x in self.raids['raids'] if int(x['id']) == int(raid_id)), None)
         total = self.return_total_trainers_in_raid(raid)
@@ -481,7 +482,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
             user = next((x for x in raid['going'] if int(x['user']['id']) == int(msg['from']['id'])), None)
 
             if response == "yes":
-                if user == None and total < 2:
+                if user == None and total < maximum_trainers_in_raid:
                     raid['going'].append({
                         "user": msg['from'],
                         "count": 0
@@ -503,7 +504,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                     return
 
             else:
-                if total < 2:
+                if total < maximum_trainers_in_raid:
                     if user != None:
                         user['count'] += 1
                     else:
@@ -596,7 +597,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                 for comment in raid['comments']:
                     message += f"\n{self.mention_member(comment['user'])}: {comment['comment']}"
 
-            if self.return_total_trainers_in_raid(raid) == 2:
+            if self.return_total_trainers_in_raid(raid) == 20:
                 message += _("\n\n*Lista fechada por atingir limite permitido*")
 
             message += _("\n\n*Created by:* %s") % (self.mention_member(raid['created_by']))
