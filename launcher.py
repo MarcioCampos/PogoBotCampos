@@ -65,7 +65,8 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                                 'status': _('active'),
                                 'going': [],
                                 'messages': [],
-                                'comments': []
+                                'comments': [],
+                                'log': []
                             }
 
                             raid_keyboard = self.create_keyboard(raid)
@@ -337,11 +338,11 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
             await self.help(user_msg)
         # None of the commands
         else:
-            if user['id'] != self.master:
+            if user['id'] != self.master and not self.is_admin(user['id']):
                 await self.help(user_msg)
 
         # MASTER commands
-        if user['id'] == self.master:
+        if user['id'] == self.master or self.is_admin(user['id']):
             # Set available raids
             if cmd == _('/setraids'):
                 self.curr_raids = []
@@ -386,15 +387,40 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                         message += f" {t['level']} {emoji.emojize(t['emoji'])}"
                     except:
                         continue
+            elif cmd == _('/viewraid'):
+                if len(params) == 1:
+                   id_raid = params[0].strip()
+                   raid = next((x for x in self.raids['raids'] if int(x['id']) == int(id_raid)), None)
+                   if raid != None:
+                      message = self.cabecalholista(raid)
+                      message += self.corpolista(raid)
+                      message += self.create_log(raid)
+                   else:
+                      message = 'Raid de ID *%s* não existe.' % (id_raid)
+                else:
+                    return
 
                 msg = await self.sender.sendMessage(message, parse_mode="markdown")
-                self.delete_messages(msg, 10)
+                self.delete_messages(msg, 30)
 
         if user_msg['chat']['type'] != 'private':
-            self.delete_messages(user_msg, 1)
+            self.delete_messages(user_msg, 30)
 
     async def help(self, user_msg):
         will_delete = _("\n\n_This message will be automatically deleted in a minute._") if user_msg['chat']['type'] != 'private' else ""
+        admins = ""
+        i = 1
+        for admin_id in self.administradores:
+            trainer = next((x for x in self.trainers if int(x['id']) == int(admin_id)), None)
+            if trainer != None:
+               if i == 1:
+                   admins = ""
+               elif len(self.administradores) == i:
+                   admins += " ou "
+               else:
+                   admins += ", "
+               admins += f"[{trainer['nickname']}](tg://user?id={admin_id})"
+               i += 1
 
         msg = await self.sender.sendMessage(
         _("*Comandos*"
@@ -428,7 +454,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
         "\n\n*Duração da Raid*"
         "\nApós 1 hora e 45 minutos, a lista da raid é definida para terminar (hora de eclodir ovos + duração da raid)."
         "\nÀ meia-noite de cada dia, as raids e missões são apagadas."
-        "\n\nQualquer dúvida, fale com %s %s") % (self.master_username, will_delete),
+        "\n\nQualquer dúvida, fale com %s %s") % (admins, will_delete),
         parse_mode="markdown")
 
         if user_msg['chat']['type'] != 'private':
@@ -492,7 +518,10 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
             elif response == "no":
                 if user != None:
                     raid['going'] = self.remove(raid['going'], msg['from']['id'])
-
+                    raid['log'].append({
+                        "user": msg['from'],
+                        "mensagem": 'Saiu ás: %s' % (time.strftime('%d/%m/%Y %H:%M:%S'))
+                    })
                     i = 0
                     for comment in raid['comments']:
                         if comment['user']['id'] == msg['from']['id']:
@@ -541,6 +570,15 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
     def exists_trainer_in_raid(self,raid,iduser):
         return next((x for x in raid['going'] if int(x['user']['id']) == iduser), None) != None
 
+    def is_admin(self, id):
+        aux = False
+        for admin_id in self.administradores:
+            if admin_id == id:
+                aux = True
+                break
+
+        return aux
+
     def return_total_trainers_in_raid(self, raid):
         total = len(raid['going'])
         for r in raid['going']:
@@ -570,37 +608,55 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
 
         return message
 
+    def cabecalholista(self,raid):
+        return _("#️⃣ ID: *%s*\n%s Pokémon: *%s*\n%s Place: *%s*\n%s Time: *%s*") % (raid['id'],emoji.emojize(':trident_emblem:'),raid['pokemon'],emoji.emojize(':round_pushpin:'),raid['place'],emoji.emojize(':alarm_clock:'),raid['start_time'])
+
+    def corpolista(self,raid):
+        i = 1
+        message = ''
+        total = self.return_total_trainers_in_raid(raid)
+
+        if total > 0:
+            message += _("\n\n*Going:* %s") % (total)
+
+        for x in raid['going']:
+            if i == 1:
+                message += "\n"
+            message += f"\n{i}. {self.mention_member(x['user'])}"
+            i += 1
+
+            total += x['count']
+
+            if x['count'] > 0:
+                message += f" (+{x['count']})"
+
+        if self.return_total_trainers_in_raid(raid) == 20:
+            message += _("\n\n*Lista fechada por atingir limite permitido*")
+
+        if len(raid['comments']) > 0:
+            message += _("\n\n*Comments:*")
+            for comment in raid['comments']:
+                message += f"\n{self.mention_member(comment['user'])}: {comment['comment']}"
+
+        message += _("\n\n*Created by:* %s") % (self.mention_member(raid['created_by']))
+
+        return  message
+
+    def create_log(self,raid):
+        message = _("\n\n*Log:*")
+        if len(raid['log']) > 0:
+            for comment in raid['log']:
+                message += f"\n{self.mention_member(comment['user'])}: {comment['mensagem']}"
+        else:
+            message += _("\n*Não há logs para essa raid.*")
+
+        return  message
+
     def create_list(self, raid):
-        message = _("#️⃣ ID: *%s*\n%s Pokémon: *%s*\n%s Place: *%s*\n%s Time: *%s*") % (raid['id'],emoji.emojize(':trident_emblem:'),raid['pokemon'],emoji.emojize(':round_pushpin:'),raid['place'],emoji.emojize(':alarm_clock:'),raid['start_time'])
+        message = self.cabecalholista(raid)
 
         if raid['status'] == _('active'):
-            i = 1
-
-            total = self.return_total_trainers_in_raid(raid)
-
-            if total > 0:
-                message += _("\n\n*Going:* %s") % (total)
-
-            for x in raid['going']:
-                if i == 1:
-                    message += "\n"
-                message += f"\n{i}. {self.mention_member(x['user'])}"
-                i += 1
-
-                total += x['count']
-
-                if x['count'] > 0:
-                    message += f" (+{x['count']})"
-
-            if len(raid['comments']) > 0:
-                message += _("\n\n*Comments:*")
-                for comment in raid['comments']:
-                    message += f"\n{self.mention_member(comment['user'])}: {comment['comment']}"
-
-            if self.return_total_trainers_in_raid(raid) == 20:
-                message += _("\n\n*Lista fechada por atingir limite permitido*")
-
-            message += _("\n\n*Created by:* %s") % (self.mention_member(raid['created_by']))
+            message += self.corpolista(raid)
 
         else:
             message += f"\n\n*{raid['status'].upper()} POR* " + self.mention_member(raid['finish_by'])
@@ -622,7 +678,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
         config = json.loads(open('config.json').read())
 
         self.master = config['master_id']
-        self.master_username = config['master_username']
+        self.administradores = config['administradores']
 
         self.curr_raids = json.loads(open('data/raids.json').read())
         self.pokemon = json.loads(open('data/pokemon.json').read())
