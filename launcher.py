@@ -101,13 +101,18 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                     msg = await self.sender.sendMessage(_("Meowth! The raid of id *%s* does not exist or has already ended!") % (raid_id))
                     self.delete_messages(msg)
                 else:
-                    if self.exists_trainer_in_raid(raid, int(user['id'])) == True:
-                        raid['start_time'] = new_time
-                        self.persist_data()
-                        for msg in raid['messages']:
-                            await self.bot.editMessageText(telepot.message_identifier(msg), self.create_list(raid), reply_markup=self.create_keyboard(raid), parse_mode="markdown")
-                    else:
-                        msg = await self.sender.sendMessage(_("Meowth! You must be part of the list to use this command!"))
+                    try:
+                        time.strptime(params[1].strip(), '%H:%M')
+                        if self.exists_trainer_in_raid(raid, int(user['id'])) == True:
+                            raid['start_time'] = new_time
+                            self.persist_data()
+                            for msg in raid['messages']:
+                                await self.bot.editMessageText(telepot.message_identifier(msg), self.create_list(raid),reply_markup=self.create_keyboard(raid),parse_mode="markdown")
+                        else:
+                            msg = await self.sender.sendMessage(_("Meowth! You must be part of the list to use this command!"))
+                            self.delete_messages(msg)
+                    except:
+                        msg = await self.sender.sendMessage(_("Meowth! The time must be in the format of *HH:MM*!"),parse_mode="markdown")
                         self.delete_messages(msg)
         # Edit the name raid
         elif cmd == _('/editname'):
@@ -389,14 +394,17 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                         continue
             elif cmd == _('/viewraid'):
                 if len(params) == 1:
-                   id_raid = params[0].strip()
-                   raid = next((x for x in self.raids['raids'] if int(x['id']) == int(id_raid)), None)
-                   if raid != None:
-                      message = self.cabecalholista(raid)
-                      message += self.corpolista(raid)
-                      message += self.create_log(raid)
-                   else:
-                      message = 'Raid de ID *%s* não existe.' % (id_raid)
+                    try:
+                        id_raid = int(params[0].strip())
+                        raid = next((x for x in self.raids['raids'] if int(x['id']) == id_raid), None)
+                        if raid != None:
+                            message = self.cabecalholista(raid)
+                            message += self.corpolista(raid)
+                            message += self.create_log(raid)
+                        else:
+                            message = 'Raid de ID *%s* não existe.' % (id_raid)
+                    except:
+                        message = "Parâmetro passado não corresponde a um número."
                 else:
                     return
 
@@ -404,7 +412,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                 self.delete_messages(msg, 30)
 
         if user_msg['chat']['type'] != 'private':
-            self.delete_messages(user_msg, 30)
+            self.delete_messages(user_msg, 1)
 
     async def help(self, user_msg):
         will_delete = _("\n\n_This message will be automatically deleted in a minute._") if user_msg['chat']['type'] != 'private' else ""
@@ -517,10 +525,11 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                     return
             elif response == "no":
                 if user != None:
+                    data_saida = datetime.datetime.now() - datetime.timedelta(hours=3)
                     raid['going'] = self.remove(raid['going'], msg['from']['id'])
                     raid['log'].append({
                         "user": msg['from'],
-                        "mensagem": 'Saiu ás: %s' % (time.strftime('%d/%m/%Y %H:%M:%S'))
+                        "mensagem": 'Saiu ás: %s' % (data_saida.strftime('%d/%m/%Y %H:%M:%S'))
                     })
                     i = 0
                     for comment in raid['comments']:
