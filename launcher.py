@@ -150,7 +150,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                         msg = await self.sender.sendMessage(_("Meowth! The raid of id *%s* does not exist or has already ended!") % (raid_id), parse_mode = "markdown")
                         self.delete_messages(msg)
                     else:
-                        if self.exists_trainer_in_raid(raid, int(user['id'])) == True:
+                        if self.exists_trainer_in_raid(raid, int(user['id'])) or self.is_admin(user['id']):
                             raid['status'] = _('canceled') if command == _('cancel') else _('ended')
                             raid['finish_by'] = user
                             self.persist_data()
@@ -264,12 +264,13 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                     obj = {}
                     _list = []
                     command = _('/share') if cmd == _('/share') else _('/comment')
+                    parametro = params[0].strip().lower()
 
                     if _id:
-                        if params[0].strip().lower() == _('r'):
+                        if parametro == _('r'):
                             _list = self.raids["raids"]
                             _type = _("raid")
-                        elif params[0].strip().lower() == _('q'):
+                        elif parametro == _('q'):
                             _list = self.quests["quests"]
                             _type = _("quest")
                         else:
@@ -283,12 +284,12 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                         else:
                             if command == _('/share'):
                                 if obj['status'] == _('active'):
-                                    if params[0] == _('r'):
+                                    if parametro == _('r'):
                                         msg = await self.sender.sendMessage(self.create_list(obj), reply_markup=self.create_keyboard(obj), parse_mode="markdown")
-                                    elif params[0] == _('q'):
+                                    elif parametro == _('q'):
                                         msg = await self.sender.sendMessage(self.create_quest(obj), parse_mode="markdown")
 
-                                    if params[0] == _('r'):
+                                    if parametro == _('r'):
                                         if next((x for x in obj['messages'] if int(x['chat']['id']) == int(msg['chat']['id'])), None) != None:
                                             await self.bot.deleteMessage(telepot.message_identifier(msg))
                                             msg = await self.sender.sendMessage(_("Meowth! The %s of id *%s* has already been posted in this group!") % (_type, _id), parse_mode = "markdown")
@@ -304,7 +305,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                             else:
                                 add = True
                                 
-                                if params[0] == _('r'):
+                                if parametro == _('r'):
                                     add = next((x for x in obj['going'] if int(x['user']['id']) == int(user['id'])), None) != None
 
                                 if add == True:
@@ -332,7 +333,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                                     self.persist_data()
 
                                     for msg in obj['messages']:
-                                        if params[0] == _('r'):
+                                        if parametro == _('r'):
                                             await self.bot.editMessageText(telepot.message_identifier(msg), self.create_list(obj), reply_markup=self.create_keyboard(obj), parse_mode="markdown")
                                         else:
                                             await self.bot.editMessageText(telepot.message_identifier(msg), self.create_quest(obj), parse_mode="markdown")       
