@@ -129,7 +129,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                         if raid == None:
                             message = "Meowth! The raid of id *%s* does not exist or has already ended!" % (raid_id)
                         else:
-                            if self.exists_trainer_in_raid(raid, int(user['id']) or self.is_admin(user['id'])):
+                            if self.exists_trainer_in_raid(raid, int(user['id'])) or self.is_admin(user['id']):
                                 pkmn_num = self.pokemon.index(new_name.replace('á', 'a').title())
                                 if pkmn_num in self.curr_raids:
                                     raid['pokemon'] = new_name
