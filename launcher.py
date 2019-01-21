@@ -535,7 +535,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                     else:
                         raid['going'].append({
                             "user": msg['from'],
-                            "count": 1
+                            "count": 0
                         })
                 else:
                     return
