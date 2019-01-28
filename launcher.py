@@ -5,6 +5,7 @@ import pytz
 import datetime
 import time
 import json
+import operator
 import emoji
 import telepot
 from telepot.aio.loop import MessageLoop
@@ -49,15 +50,15 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
 
             if len(parts) == 3:
                 try:
-                    pkmn_num = self.pokemon.index(parts[0].strip().replace('á', 'a').title())
+                    pokemon = self.retornar_pokemon(parts[0].strip())
 
-                    if pkmn_num in self.curr_raids:
+                    if pokemon != None:
                         try:
                             time.strptime(parts[2].strip(), '%H:%M')
 
                             raid = {
                                 'id': int(self.raids['index']) + 1,
-                                'pokemon': parts[0].strip().title(),
+                                'pokemon': pokemon,
                                 'place': parts[1].strip().title(),
                                 'start_time': parts[2].strip(),
                                 'created_by': user,
@@ -78,10 +79,10 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
 
                             if next((x for x in raid['messages'] if int(x['message_id']) == int(msg['message_id'])), None) == None:
                                 raid['messages'].append(msg)
-                            
+
                             self.raids["index"] = int(raid['id'])
                             self.raids["raids"].append(raid)
-                            self.persist_data()                        
+                            self.persist_data()
                         except Exception as e:
                             msg = await self.sender.sendMessage(_("Meowth! The time must be in the format of *HH:MM*!"), parse_mode="markdown")
                             self.delete_messages(msg)
@@ -122,7 +123,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
         elif cmd == _('/editname'):
             if len(params) == 2:
                 raid_id = params[0].strip()
-                new_name = params[1].strip().title()
+                new_name = params[1].strip()
                 try:
                     if raid_id.isdigit():
                         raid = next((x for x in self.raids['raids'] if int(x['id']) == int(raid_id)), None)
@@ -130,14 +131,17 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                             message = "Meowth! The raid of id *%s* does not exist or has already ended!" % (raid_id)
                         else:
                             if self.exists_trainer_in_raid(raid, int(user['id'])) or self.is_admin(user['id']):
-                                pkmn_num = self.pokemon.index(new_name.replace('á', 'a').title())
-                                if pkmn_num in self.curr_raids:
-                                    raid['pokemon'] = new_name
-                                    self.add_log_in_raid(raid, user, "Editado pokémon ás: %s" % (self.return_data_hora_local()))
-                                    self.persist_data()
-                                    for msg in raid['messages']:
-                                        await self.bot.editMessageText(telepot.message_identifier(msg),self.create_list(raid),reply_markup=self.create_keyboard(raid),parse_mode="markdown")
-                                        message = "Miau! Raid de id *%s* foi trocado de pokemon!" % (raid_id)
+                                pokemon = self.retornar_pokemon(new_name)
+                                if pokemon != None:
+                                    if pokemon['status'] == 'ativado':
+                                        raid['pokemon'] = pokemon
+                                        self.add_log_in_raid(raid, user, "Editado pokémon ás: %s" % (self.return_data_hora_local()))
+                                        self.persist_data()
+                                        for msg in raid['messages']:
+                                            await self.bot.editMessageText(telepot.message_identifier(msg),self.create_list(raid),reply_markup=self.create_keyboard(raid),parse_mode="markdown")
+                                            message = "Miau! Raid de id *%s* foi trocado de pokemon!" % (raid_id)
+                                    else:
+                                        message = "Miau! O pokémon *%s* não esta ativo para raids!" % (pokemon['name'])
                                 else:
                                     message = "Meowth! The Pokémon *%s* is not currently in the raids!" % (new_name)
                             else:
@@ -166,11 +170,12 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                             self.persist_data()
                             for msg in raid['messages']:
                                 await self.bot.editMessageText(telepot.message_identifier(msg), self.create_list(raid), reply_markup=None, parse_mode="markdown")
-                                message = "Miau! Raid de id *%s* foi *%s*" %(raid_id, raid['status'])
+                                message = "Miau! Raid de id *%s* foi *%s*!" %(raid_id, raid['status'])
                         else:
                             message = "Meowth! You must be part of the list to use this command!"
                 else:
                     message = "Miau! Id passado não corresponde a um número!"
+
                 msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
                 self.delete_messages(msg)
         # Set trainer informations
@@ -231,9 +236,9 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                         if level > 0 and level <= 40:
                             trainer['level'] = level
                             self.persist_data()
-                            message = "Meowth! Your level was updated to *%s*!" % (level)
+                            message = "Miau! Seu level foi atualizado para *%s*!" % (level)
                         else:
-                            message = "Meowth! Input a valid level!"
+                            message = 'Meowth! Input a valid level!'
                     else:
                         message = "Meowth! Set up your informations using */trainer team level*! This command is only for updating your level after your trainer's info are all set up!"
                 else:
@@ -365,7 +370,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
         # MASTER-Admins commands
         if user['id'] == self.master or self.is_admin(user['id']):
             # Visualizar Raid
-            if cmd == _('/viewraid'):
+            if cmd == _('/visualizarraid'):
                 if len(params) == 1:
                    id_raid = params[0].strip()
                    if id_raid.isdigit():
@@ -377,12 +382,12 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                         else:
                             mensagem = "Meowth! The raid of id *%s* does not exist or has already ended!" % (raid_id)
                    else:
-                        mensagem = "Miau! Parâmetro passado não corresponde a um número."
+                        mensagem = "Miau! Parâmetro passado não corresponde a um número!"
 
                 msg = await self.sender.sendMessage(_(mensagem), parse_mode="markdown")
                 self.delete_messages(msg, 30)
              # Re Ativar uma raid
-            elif cmd == _('/activeraid'):
+            elif cmd == _('/ativarraid'):
                 if len(params) == 1:
                    id_raid = params[0].strip()
                    if id_raid.isdigit():
@@ -393,14 +398,71 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                           self.persist_data()
                           for mmm in raid['messages']:
                               await self.bot.editMessageText(telepot.message_identifier(mmm), self.create_list(raid),reply_markup=self.create_keyboard(raid), parse_mode="markdown")
-                              message = "Miau! Raid de ID *%s* foi Reativada." % (id_raid)
+                              message = "Miau! Raid de ID *%s* foi Reativada!" % (id_raid)
                       else:
-                          message = "Miau! Raid de ID *%s* ainda ativa." % (id_raid)
+                          message = "Miau! Raid de ID *%s* ainda ativa!" % (id_raid)
                    else:
-                       message = "Miau! Parâmetro passado não corresponde a um número."
+                       message = "Miau! Parâmetro passado não corresponde a um número!"
 
                 msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
                 self.delete_messages(msg)
+            # Adicionar Pokemon Raid
+            elif cmd == _('/pokemon'):
+                parts = " ".join(params).split(',')
+                if len(parts) >= 3:
+                    id_pokemon = parts[0].strip()
+                    level = parts[2].strip()
+                    if id_pokemon.isdigit() and level.isdigit():
+                        pokemon = {
+                            'id': int(id_pokemon),
+                            'name': parts[1].strip().lower(),
+                            'level': int(level),
+                            'comment': parts[3].strip(),
+                            'status': ('ativado'),
+                            'created_by': user
+                        }
+                        if self.retornar_pokemon(id_pokemon) == None:
+                            self.pokemons.append(pokemon)
+                        else:
+                            i = 0
+                            for x in self.pokemons:
+                                if int(x['id']) == int(pokemon['id']):
+                                    self.pokemons.pop(i)
+                                    self.pokemons.append(pokemon)
+                                    break
+                                else:
+                                    i += 1
+
+                        self.persist_data()
+                        message = "Miau! Pokémon *%s* adicionado as raids!" % (pokemon['name'])
+                    else:
+                        message = "Miau! Parâmetros passados não correspondem a números!"
+
+                    msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
+                    self.delete_messages(msg)
+            # Listar Pokemons
+            elif cmd == _('/listarpokemons'):
+                if len(self.pokemons) > 0:
+                    message = "Pokémons de Raid:\n"
+                    for x in self.pokemons:
+                        message += f"{x['id']} {x['name']} {x['level']} {x['status']}\n"
+                else:
+                    message = "Miau! Lista de pokémons Vazia!"
+
+                msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
+                self.delete_messages(msg, 30)
+            #Help dos Admins
+            elif cmd == _('/ajudaadmin'):
+                mensagem = _("*Comandos*"
+                             "\n/visualizarraid id_raid - Visualiza o log da raid."
+                             "\n`/visualizarraid 1`"
+                             "\n/ativarraid id_raid - Reativa uma raid finalizada\cancelada indevidamente."
+                             "\n`/ativarraid 1`"
+                             "\n/pokemon numero_dex, nome, level, observação - Adiciona pokémon para raid."
+                             "\n`/pokemon 25, pikachu, 3, minímo de 2 treinadores`"
+                             )
+                msg = await self.sender.sendMessage(_(mensagem), parse_mode="markdown")
+                self.delete_messages(msg, 30)
 
         if user_msg['chat']['type'] != 'private':
             self.delete_messages(user_msg, 1)
@@ -563,6 +625,12 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
 
         return f"[{username}](tg://user?id={user['id']}){trainer_info}"
 
+    def retornar_pokemon(self, argumento):
+        if argumento.isdigit():
+            return next((x for x in self.pokemons if int(x['id']) == int(argumento)), None)
+        else:
+            return next((x for x in self.pokemons if x['name'] == argumento.lower()), None)
+
     def exists_trainer_in_raid(self, raid, iduser):
         return next((x for x in raid['going'] if int(x['user']['id']) == iduser), None) != None
 
@@ -615,7 +683,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
         return message
 
     def cabecalholista(self,raid):
-        return _("#️⃣ ID: *%s*\n%s Pokémon: *%s*\n%s Place: *%s*\n%s Time: *%s*") % (raid['id'],emoji.emojize(':trident_emblem:'),raid['pokemon'],emoji.emojize(':round_pushpin:'),raid['place'],emoji.emojize(':alarm_clock:'),raid['start_time'])
+        return _("#️⃣ ID: *%s*\n%s Pokémon: *%s*\n%s Place: *%s*\n%s Time: *%s*") % (raid['id'],emoji.emojize(':trident_emblem:'),raid['pokemon']['name'].title(),emoji.emojize(':round_pushpin:'),raid['place'],emoji.emojize(':alarm_clock:'),raid['start_time'])
 
     def corpolista(self,raid):
         i = 1
@@ -663,9 +731,8 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
 
         if raid['status'] == _('active'):
             message += self.corpolista(raid)
-
         else:
-            message += f"\n\n*{raid['status'].upper()} POR* " + self.mention_member(raid['finish_by'])
+            message += f"\n\n*{raid['status'].upper()} POR* {self.mention_member(raid['finish_by'])}"
 
         return message
 
@@ -686,11 +753,12 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
         self.master = config['master_id']
         self.administradores = config['administradores']
 
-        self.curr_raids = json.loads(open('data/raids.json').read())
-        self.pokemon = json.loads(open('data/pokemon.json').read())
+        #self.curr_raids = json.loads(open('data/raids.json').read())
+        #self.pokemon = json.loads(open('data/pokemon.json').read())
         self.raids = json.loads(open('data/active_raids.json').read())
         self.trainers = json.loads(open('data/trainers.json').read())
         self.quests = json.loads(open('data/quests.json').read())
+        self.pokemons = json.loads(open('data/pokemons_raid.json').read())
 
     def persist_data(self):
         # save active raids
@@ -703,7 +771,10 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
         self.save_json(self.quests, 'data/quests.json')
 
         # save current available raids
-        self.save_json(self.curr_raids, 'data/raids.json')
+        #self.save_json(self.curr_raids, 'data/raids.json')
+
+        # save pokemons in raid
+        self.save_json(self.pokemons, 'data/pokemons_raid.json')
 
     def save_json(self, obj, filename):
         with open(filename, 'w') as f:
