@@ -444,7 +444,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
             elif cmd == _('/listarpokemons'):
                 if len(self.pokemons) > 0:
                     message = "Pokémons de Raid:\n"
-                    for x in self.pokemons:
+                    for x in sorted(self.pokemons, key=lambda p: p.get('name')):
                         message += f"{x['id']} {x['name']} {x['level']} {x['status']}\n"
                 else:
                     message = "Miau! Lista de pokémons Vazia!"
