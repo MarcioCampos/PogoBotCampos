@@ -83,13 +83,13 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                             self.raids["raids"].append(raid)
                             self.persist_data()
                         except Exception as e:
-                            msg = await self.sender.sendMessage(_("Meowth! The time must be in the format of *HH:MM*!"), parse_mode="markdown")
+                            msg = await self.sender.sendMessage("Miau! A hora deve estar no formato de *HH:MM*!", parse_mode="markdown")
                             self.delete_messages(msg)
                     else:
-                        msg = await self.sender.sendMessage(_("Meowth! The Pokémon *%s* is not currently in the raids!") % (parts[0].strip().title()), parse_mode = "markdown")
+                        msg = await self.sender.sendMessage("Miau! O pokémon *%s* não esta ativo para raids!" % (parts[0].strip().title()), parse_mode = "markdown")
                         self.delete_messages(msg)
                 except:
-                    msg = await self.sender.sendMessage(_("Meowth! *%s* is not a valid Pokémon!") % (parts[0].strip().title()), parse_mode = "markdown")
+                    msg = await self.sender.sendMessage("Miau! *%s* não é um Pokémon válido!" % (parts[0].strip().title()), parse_mode = "markdown")
                     self.delete_messages(msg)
         # Edit the start time of the raid
         elif cmd == _('/edit'):
@@ -111,9 +111,9 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                                     await self.bot.editMessageText(telepot.message_identifier(msg), self.create_list(raid), reply_markup=self.create_keyboard(raid), parse_mode="markdown")
                                     message = "Miau! Raid de id *%s* foi alterada a hora!" % (raid_id)
                             else:
-                                message = "Meowth! You must be part of the list to use this command!"
+                                message = "Miau! Você deve fazer parte da lista para usar este comando!"
                         except:
-                            message = "Meowth! The time must be in the format of *HH:MM*!"
+                            message = "Miau! A hora deve estar no formato de *HH:MM*!"
                 else:
                     message = "Miau! Id passado não corresponde a um número!"
                 msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
@@ -142,13 +142,13 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                                     else:
                                         message = "Miau! O pokémon *%s* não esta ativo para raids!" % (pokemon['name'].title())
                                 else:
-                                    message = "Meowth! The Pokémon *%s* is not currently in the raids!" % (new_name).title()
+                                    message = "Miau! O pokémon *%s* não esta ativo para raids!" % (new_name).title()
                             else:
-                                message = "Meowth! You must be part of the list to use this command!"
+                                message = "Miau! Você deve fazer parte da lista para usar este comando!"
                     else:
                         message = "Miau! Id passado não corresponde a um número!"
                 except:
-                    message = "Meowth! *%s* is not a valid Pokémon!" % (new_name).title()
+                    message = "Miau! *%s* não é um Pokémon válido!" % (new_name).title()
                 msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
                 self.delete_messages(msg)
         # Adicionar Mais 1 na raid
@@ -180,7 +180,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                                 message_idf = telepot.message_identifier(msg)
                                 await self.bot.editMessageText(message_idf, self.create_list(raid), reply_markup=raid_keyboard, parse_mode="markdown")
                         else:
-                            message = "Miau! Número máximo de jogadores excedido."
+                            message = "Miau! Número máximo de jogadores excedido!"
                 else:
                     message = "Miau! Id passado não corresponde a um número!"
                 msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
@@ -194,7 +194,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                 if raid_id.isdigit():
                     raid = self.retornar_raid(raid_id)
                     if raid is None:
-                        message = "Meowth! The raid of id *%s* does not exist or has already ended!" % (raid_id)
+                        message = "Miau! A raid de id *%s* não existe ou já foi finalizada!" % (raid_id)
                     else:
                         if self.exists_trainer_in_raid(raid, int(user['id'])) or self.is_admin(user['id']):
                             raid['status'] = _('canceled') if command == _('cancel') else _('ended')
@@ -205,7 +205,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                                 await self.bot.editMessageText(telepot.message_identifier(msg), self.create_list(raid), reply_markup=None, parse_mode="markdown")
                                 message = "Miau! Raid de id *%s* foi *%s*!" %(raid_id, raid['status'].upper())
                         else:
-                            message = "Meowth! You must be part of the list to use this command!"
+                            message = "Miau! Você deve fazer parte da lista para usar este comando!"
                 else:
                     message = "Miau! Id passado não corresponde a um número!"
 
@@ -253,9 +253,9 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                             i += 1
 
                 self.persist_data()
-                message = "Meowth! Team *%s* and level *%s* set!" % (trainer_team.title(), trainer['level'])
+                message = "Miau! Time *%s* e level *%s* informados!" % (trainer_team.title(), trainer['level'])
             else:
-                message = "Miau! Informe um time e level válido!"
+                message = "Miau! Informe um time e level válidos!"
             msg = await self.sender.sendMessage(_(message), parse_mode = "markdown")
             self.delete_messages(msg)
         # Update trainer's level
@@ -265,7 +265,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                 if level.isdigit():
                     level = int(level)
                     trainer = next((x for x in self.trainers if int(x['id']) == int(user['id'])), None)
-                    if trainer != None:
+                    if trainer is not None:
                         if level > 0 and level <= 40:
                             trainer['level'] = level
                             self.persist_data()
@@ -273,7 +273,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                         else:
                             message = "Miau! Informe um level válido!"
                     else:
-                        message = "Meowth! Set up your informations using */trainer team level*! This command is only for updating your level after your trainer's info are all set up!"
+                        message = "Miau! Configure suas informações usando */treinador time level*! Este comando é apenas para atualizar seu level depois que as informações do seu treinador estiverem configuradas!"
                 else:
                     message = "Miau! Informe um level válido!"
                 msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
