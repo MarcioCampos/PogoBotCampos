@@ -116,7 +116,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                             message = "Miau! A hora deve estar no formato de *HH:MM*!"
                 else:
                     message = "Miau! Id passado não corresponde a um número!"
-                msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
+                msg = await self.sender.sendMessage(message, parse_mode="markdown")
                 self.delete_messages(msg)
         # Edit the name raid
         elif cmd == _('/editname'):
@@ -149,10 +149,10 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                         message = "Miau! Id passado não corresponde a um número!"
                 except:
                     message = "Miau! *%s* não é um Pokémon válido!" % (new_name).title()
-                msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
+                msg = await self.sender.sendMessage(message, parse_mode="markdown")
                 self.delete_messages(msg)
         # Adicionar Mais 1 na raid
-        elif cmd == _('/maisum'):
+        elif cmd == '/maisum':
             if len(params) >= 2:
                 raid_id = params[0].strip()
                 if raid_id.isdigit():
@@ -183,7 +183,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                             message = "Miau! Número máximo de jogadores excedido!"
                 else:
                     message = "Miau! Id passado não corresponde a um número!"
-                msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
+                msg = await self.sender.sendMessage(message, parse_mode="markdown")
                 self.delete_messages(msg)
 		# Cancel/finish active raid
         elif cmd == _('/cancel') or cmd == _('/end'):
@@ -209,7 +209,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                 else:
                     message = "Miau! Id passado não corresponde a um número!"
 
-                msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
+                msg = await self.sender.sendMessage(message, parse_mode="markdown")
                 self.delete_messages(msg)
         # Set trainer informations
         elif cmd == _('/trainer'):
@@ -256,7 +256,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                 message = "Miau! Time *%s* e level *%s* informados!" % (trainer_team.title(), trainer['level'])
             else:
                 message = "Miau! Informe um time e level válidos!"
-            msg = await self.sender.sendMessage(_(message), parse_mode = "markdown")
+            msg = await self.sender.sendMessage(message, parse_mode = "markdown")
             self.delete_messages(msg)
         # Update trainer's level
         elif cmd == _('/level'):
@@ -276,8 +276,35 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                         message = "Miau! Configure suas informações usando */treinador time level*! Este comando é apenas para atualizar seu level depois que as informações do seu treinador estiverem configuradas!"
                 else:
                     message = "Miau! Informe um level válido!"
-                msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
+                msg = await self.sender.sendMessage(message, parse_mode="markdown")
                 self.delete_messages(msg)
+        # Pesquisar Gyn
+        elif cmd == '/pesquisargyn':
+            if len(params) == 1 and params[0].isdigit():
+                gyn = self.retornar_gyn(params[0])
+                gyns = "%s %s\n" % (gyn['id'], gyn['name'].title())
+            elif len(params) >= 1:
+                nome_gyn = ""
+                tempo = 20
+                for word in params:
+                    if params.index(word) >= 0:
+                        nome_gyn += f"{word.strip()} "
+
+                gyns = ""
+                for gyn in self.gyns:
+                    if gyn['name'].find(nome_gyn) > -1:
+                        gyns += "%s %s\n" % (gyn['id'], gyn['name'].title())
+
+                if gyns == "":
+                    tempo = 5
+                    gyns = "Miau! Não há Ginásio(s) que contenha(m) o nome passado!"
+            else:
+                tempo = 5
+                gyns = "Miau! Não foi informado nenhum parâmetro!"
+
+            msg = await self.sender.sendMessage(gyns, parse_mode="markdown")
+            self.delete_messages(msg, tempo)
+
         # Post a quest report
         elif cmd == _('/quest'):
             parts = " ".join(params).split(',')
@@ -399,7 +426,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
         # MASTER-Admins commands
         if user['id'] == self.master or self.is_admin(user['id']):
             # Visualizar Raid
-            if cmd == _('/visualizarraid'):
+            if cmd == '/visualizarraid':
                 if len(params) == 1:
                    id_raid = params[0].strip()
                    if id_raid.isdigit():
@@ -413,10 +440,10 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                    else:
                         mensagem = "Miau! Parâmetro passado não corresponde a um número!"
 
-                msg = await self.sender.sendMessage(_(mensagem), parse_mode="markdown")
+                msg = await self.sender.sendMessage(mensagem, parse_mode="markdown")
                 self.delete_messages(msg, 30)
              # Re Ativar uma raid
-            elif cmd == _('/ativarraid'):
+            elif cmd == '/ativarraid':
                 if len(params) == 1:
                    id_raid = params[0].strip()
                    if id_raid.isdigit():
@@ -433,10 +460,10 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                    else:
                        message = "Miau! Parâmetro passado não corresponde a um número!"
 
-                msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
+                msg = await self.sender.sendMessage(message, parse_mode="markdown")
                 self.delete_messages(msg)
             # Adicionar Pokemon Raid
-            elif cmd == _('/pokemon'):
+            elif cmd == '/pokemon':
                 parts = " ".join(params).split(',')
                 if len(parts) >= 3:
                     id_pokemon = parts[0].strip()
@@ -467,10 +494,10 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                     else:
                         message = "Miau! Parâmetros passados não correspondem a números!"
 
-                    msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
+                    msg = await self.sender.sendMessage(message, parse_mode="markdown")
                     self.delete_messages(msg)
             # Listar Pokemons
-            elif cmd == _('/listarpokemons'):
+            elif cmd == '/listarpokemons':
                 if len(self.pokemons) > 0:
                     message = "Pokémons de Raid:\n"
                     for x in sorted(self.pokemons, key=lambda p: p.get('name')):
@@ -478,10 +505,10 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                 else:
                     message = "Miau! Lista de pokémons Vazia!"
 
-                msg = await self.sender.sendMessage(_(message), parse_mode="markdown")
+                msg = await self.sender.sendMessage(message, parse_mode="markdown")
                 self.delete_messages(msg, 30)
             #Adicionar Gyn
-            elif cmd == _('/gyn'):
+            elif cmd == '/gyn':
                 parts = " ".join(params).split(',')
                 if len(parts) >= 4:
                     gyn = {
@@ -497,7 +524,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                     msg = await self.sender.sendMessage("Miau! Ginásio *%s* adicionado com sucesso!" % (gyn['name'].title()), parse_mode="markdown")
                     self.delete_messages(msg)
             #Help dos Admins
-            elif cmd == _('/ajudaadmin'):
+            elif cmd == '/ajudaadmin':
                 mensagem = _("*Comandos*"
                              "\n/visualizarraid id_raid - Visualiza o log da raid."
                              "\n`/visualizarraid 1`"
@@ -508,7 +535,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
                              "\n/gyn nome, coordenada, ex(sim ou nao) - Criar um gyn."
                              "\n`/gyn coreto do liceu, -21.333333,-41.333333, sim`"
                              )
-                msg = await self.sender.sendMessage(_(mensagem), parse_mode="markdown")
+                msg = await self.sender.sendMessage(mensagem, parse_mode="markdown")
                 self.delete_messages(msg, 30)
 
         if user_msg['chat']['type'] != 'private':
@@ -744,7 +771,7 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
 
         return total
 
-    def create_keyboard(self, raid): #InlineKeyboardButton(text='+1', callback_data=f"{raid['id']},+1"),
+    def create_keyboard(self, raid):
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text=_('Yes'), callback_data=f"{raid['id']},yes"),
             InlineKeyboardButton(text=_('No'), callback_data=f"{raid['id']},no"),
@@ -775,7 +802,11 @@ class ThePokeGOBot(telepot.aio.helper.ChatHandler):
         if gyn is None:
             cabeca += "%s Local: *%s*\n" % (emoji.emojize(':round_pushpin:'), raid['place'])
         else:
-            cabeca += "%s Local: *%s*\n" % (emoji.emojize(':round_pushpin:'), raid['place'] + ("" if gyn['ex'] is False else " (Passe EX)"))
+            cabeca += "%s Local: *%s*\n" % (emoji.emojize(':round_pushpin:'), raid['place'])
+
+            if gyn['ex'] is True:
+                cabeca += "%s *Ginásio de Passe EX*\n" % (emoji.emojize(':warning:'))
+
             cabeca += "%s Coordenada: *%s*\n" % (emoji.emojize(':round_pushpin:'), gyn['coords'])
 
         cabeca += "%s Horário: *%s*" % (emoji.emojize(':alarm_clock:'),raid['start_time'])
@@ -897,6 +928,6 @@ bot = telepot.aio.DelegatorBot(config['token'], [
 loop = asyncio.get_event_loop()
 loop.create_task(MessageLoop(bot).run_forever())
 
-print(_("Meowth! That's right!"))
+print(_("Miau! E isso ai Campos Oficial!"))
 
 loop.run_forever()
